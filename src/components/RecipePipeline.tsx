@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Trash2,
   ArrowUp,
@@ -15,7 +15,12 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { OPERATION_MAP } from '../engine/registry';
-import { RecipeStep, StepExecutionSnapshot } from '../types/engine';
+import {
+  OperationArgDefinition,
+  OperationArgOption,
+  RecipeStep,
+  StepExecutionSnapshot,
+} from '../types/engine';
 
 interface RecipePipelineProps {
   recipe: RecipeStep[];
@@ -30,7 +35,7 @@ interface RecipePipelineProps {
   onClearRecipe: () => void;
 }
 
-export const RecipePipeline: React.FC<RecipePipelineProps> = ({
+export function RecipePipeline({
   recipe,
   snapshots,
   inspectedStepId,
@@ -41,11 +46,14 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
   onMoveStep,
   onRemoveStep,
   onClearRecipe,
-}) => {
+}: RecipePipelineProps) {
   const [expandedPreviews, setExpandedPreviews] = useState<Record<string, boolean>>({});
 
   const toggleInlinePreview = (stepId: string) => {
-    setExpandedPreviews((prev) => ({ ...prev, [stepId]: !prev[stepId] }));
+    setExpandedPreviews((prev: Record<string, boolean>) => ({
+      ...prev,
+      [stepId]: !prev[stepId],
+    }));
   };
 
   return (
@@ -62,6 +70,7 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
         <div className="flex items-center gap-1.5">
           {inspectedStepId && (
             <button
+              type="button"
               onClick={() => onSelectInspectStep(null)}
               className="px-2 py-1 rounded text-[11px] font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition"
             >
@@ -70,6 +79,7 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
           )}
           {recipe.length > 0 && (
             <button
+              type="button"
               onClick={onClearRecipe}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition"
               title="Clear all steps"
@@ -93,11 +103,12 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
             <Layers className="w-8 h-8 text-slate-600 mb-2" />
             <p className="text-sm font-medium text-slate-300">Your Recipe Pipeline is Empty</p>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Click any operation on the left sidebar or choose a Quick-Start Demo Recipe at the bottom-left to start transforming data.
+              Click any operation on the left sidebar or choose a Quick-Start Demo Recipe at the
+              bottom-left to start transforming data.
             </p>
           </div>
         ) : (
-          recipe.map((step, index) => {
+          recipe.map((step: RecipeStep, index: number) => {
             const op = OPERATION_MAP.get(step.operationId);
             const snap = snapshots[index];
             const isPinned = inspectedStepId === step.id;
@@ -215,7 +226,7 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
                 {/* Step Arguments Form */}
                 {op && op.args.length > 0 && (
                   <div className="p-3 space-y-2.5 bg-slate-900/40">
-                    {op.args.map((arg) => {
+                    {op.args.map((arg: OperationArgDefinition) => {
                       const val = step.args[arg.name] ?? arg.defaultValue;
                       return (
                         <div key={arg.name} className="flex flex-col gap-1">
@@ -243,7 +254,7 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
                                 }
                                 className="w-full bg-slate-950 border border-slate-800 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:border-cyan-500/60 focus:outline-none"
                               >
-                                {arg.options?.map((opt) => (
+                                {arg.options?.map((opt: OperationArgOption) => (
                                   <option key={opt.value} value={opt.value}>
                                     {opt.label}
                                   </option>
@@ -358,4 +369,4 @@ export const RecipePipeline: React.FC<RecipePipelineProps> = ({
       </div>
     </section>
   );
-};
+}

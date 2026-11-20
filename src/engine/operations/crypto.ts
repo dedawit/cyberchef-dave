@@ -1,16 +1,31 @@
 import { OperationDefinition } from '../../types/engine';
 
 async function postNodeApi(endpoint: string, body: Record<string, any>): Promise<string> {
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || `Node backend error (${response.status})`);
+  const candidates = [endpoint, `http://127.0.0.1:3001${endpoint}`];
+  let lastError = 'Node backend unreachable';
+
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const text = await response.text();
+      if (!text) continue;
+      const data = JSON.parse(text);
+      if (!response.ok) {
+        throw new Error(data.error || `Node backend error (${response.status})`);
+      }
+      return String(data.output ?? '');
+    } catch (err: any) {
+      lastError = err?.message || String(err);
+      if (lastError && !lastError.includes('Failed to fetch') && !lastError.includes('JSON')) {
+        throw err;
+      }
+    }
   }
-  return String(data.output ?? '');
+  throw new Error(lastError);
 }
 
 function parseXorKey(keyStr: string, encoding: string): Uint8Array {

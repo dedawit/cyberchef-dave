@@ -1,42 +1,60 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Shield, Play, Zap, Server } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Shield, Play, Zap, Server, Sun, Moon } from 'lucide-react';
 import { OPERATION_MAP, PRESET_RECIPES } from './engine/registry';
 import { runRecipePipeline } from './engine/runner';
 import {
+  OperationArgDefinition,
   OperationDefinition,
   PipelineRunResult,
   PresetRecipe,
   RecipeStep,
+  StepExecutionSnapshot,
 } from './types/engine';
 import { Sidebar } from './components/Sidebar';
 import { RecipePipeline } from './components/RecipePipeline';
 import { Workbench } from './components/Workbench';
 
-export const App: React.FC = () => {
-  const initialPreset = PRESET_RECIPES[0];
+export function App() {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('cyberchef_dave_theme');
+      return saved === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
 
-  const [input, setInput] = useState<string>(initialPreset.sampleInput);
-  const [recipe, setRecipe] = useState<RecipeStep[]>(() =>
-    initialPreset.steps.map((s, idx) => {
-      const def = OPERATION_MAP.get(s.operationId);
-      const defaultArgs: Record<string, any> = {};
-      def?.args.forEach((a) => {
-        defaultArgs[a.name] = a.defaultValue;
-      });
-      return {
-        id: `step-${idx}-${Date.now()}`,
-        operationId: s.operationId,
-        enabled: true,
-        args: { ...defaultArgs, ...(s.args || {}) },
-      };
-    })
-  );
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('cyberchef_dave_theme', theme);
+    } catch {
+      // ignore storage errors
+    }
+  }, [theme]);
+
+  const [input, setInput] = useState<string>('');
+  const [recipe, setRecipe] = useState<RecipeStep[]>(() => [
+    {
+      id: `step-0-${Date.now()}`,
+      operationId: 'from_base64',
+      enabled: true,
+      args: {},
+    },
+  ]);
 
   const [autoBake, setAutoBake] = useState<boolean>(true);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('cyberchef_dave_favorites');
-      return saved ? JSON.parse(saved) : ['to_base64', 'from_base64', 'jwt_decode', 'crypto_hash', 'aes_encrypt'];
+      return saved
+        ? JSON.parse(saved)
+        : ['to_base64', 'from_base64', 'jwt_decode', 'crypto_hash', 'aes_encrypt'];
     } catch {
       return ['to_base64', 'from_base64', 'jwt_decode', 'crypto_hash'];
     }
@@ -54,14 +72,24 @@ export const App: React.FC = () => {
   });
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.status === 'ok') {
-          setNodeStatus({ online: true, version: data.nodeVersion });
+    const checkBackend = async () => {
+      for (const base of ['', 'http://127.0.0.1:3001']) {
+        try {
+          const r = await fetch(`${base}/api/health`);
+          if (r.ok) {
+            const data = await r.json();
+            if (data?.status === 'ok') {
+              setNodeStatus({ online: true, version: data.nodeVersion });
+              return;
+            }
+          }
+        } catch {
+          // try fallback
         }
-      })
-      .catch(() => setNodeStatus({ online: false }));
+      }
+      setNodeStatus({ online: false });
+    };
+    checkBackend();
   }, []);
 
   const executeBake = useCallback(async (currentInput: string, currentRecipe: RecipeStep[]) => {
@@ -83,8 +111,10 @@ export const App: React.FC = () => {
   }, [input, recipe, autoBake, executeBake]);
 
   const handleToggleFavorite = (opId: string) => {
-    setFavorites((prev) => {
-      const next = prev.includes(opId) ? prev.filter((id) => id !== opId) : [...prev, opId];
+    setFavorites((prev: string[]) => {
+      const next = prev.includes(opId)
+        ? prev.filter((id: string) => id !== opId)
+        : [...prev, opId];
       try {
         localStorage.setItem('cyberchef_dave_favorites', JSON.stringify(next));
       } catch {
@@ -96,7 +126,7 @@ export const App: React.FC = () => {
 
   const handleAddOperation = (op: OperationDefinition) => {
     const defaultArgs: Record<string, any> = {};
-    op.args.forEach((a) => {
+    op.args.forEach((a: OperationArgDefinition) => {
       defaultArgs[a.name] = a.defaultValue;
     });
     const newStep: RecipeStep = {
@@ -105,7 +135,7 @@ export const App: React.FC = () => {
       enabled: true,
       args: defaultArgs,
     };
-    setRecipe((prev) => [...prev, newStep]);
+    setRecipe((prev: RecipeStep[]) => [...prev, newStep]);
   };
 
   const handleLoadPreset = (preset: PresetRecipe) => {
@@ -115,7 +145,7 @@ export const App: React.FC = () => {
       preset.steps.map((s, idx) => {
         const def = OPERATION_MAP.get(s.operationId);
         const defaultArgs: Record<string, any> = {};
-        def?.args.forEach((a) => {
+        def?.args.forEach((a: OperationArgDefinition) => {
           defaultArgs[a.name] = a.defaultValue;
         });
         return {
@@ -129,23 +159,29 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateStepArgs = (stepId: string, argName: string, value: any) => {
-    setRecipe((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, args: { ...s.args, [argName]: value } } : s))
+    setRecipe((prev: RecipeStep[]) =>
+      prev.map((s: RecipeStep) =>
+        s.id === stepId ? { ...s, args: { ...s.args, [argName]: value } } : s
+      )
     );
   };
 
   const handleToggleStepEnabled = (stepId: string) => {
-    setRecipe((prev) => prev.map((s) => (s.id === stepId ? { ...s, enabled: !s.enabled } : s)));
+    setRecipe((prev: RecipeStep[]) =>
+      prev.map((s: RecipeStep) => (s.id === stepId ? { ...s, enabled: !s.enabled } : s))
+    );
   };
 
   const handleToggleStepBreakpoint = (stepId: string) => {
-    setRecipe((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, breakpoint: !s.breakpoint } : s))
+    setRecipe((prev: RecipeStep[]) =>
+      prev.map((s: RecipeStep) =>
+        s.id === stepId ? { ...s, breakpoint: !s.breakpoint } : s
+      )
     );
   };
 
   const handleMoveStep = (index: number, direction: -1 | 1) => {
-    setRecipe((prev) => {
+    setRecipe((prev: RecipeStep[]) => {
       const target = index + direction;
       if (target < 0 || target >= prev.length) return prev;
       const copy = [...prev];
@@ -159,11 +195,11 @@ export const App: React.FC = () => {
     if (inspectedStepId === stepId) {
       setInspectedStepId(null);
     }
-    setRecipe((prev) => prev.filter((s) => s.id !== stepId));
+    setRecipe((prev: RecipeStep[]) => prev.filter((s: RecipeStep) => s.id !== stepId));
   };
 
   const inspectedSnapshot =
-    runResult.steps.find((s) => s.stepId === inspectedStepId) || null;
+    runResult.steps.find((s: StepExecutionSnapshot) => s.stepId === inspectedStepId) || null;
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
@@ -186,8 +222,8 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Controls: Node Engine Status + Auto-Bake + Manual Bake */}
-        <div className="flex items-center gap-3">
+        {/* Right Controls: Node Engine Status + Theme Toggle + Auto-Bake + Manual Bake */}
+        <div className="flex items-center gap-2.5">
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border ${
               nodeStatus.online
@@ -203,6 +239,25 @@ export const App: React.FC = () => {
             </span>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:bg-slate-800 text-xs text-slate-200 transition"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Light Mode</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Dark Mode</span>
+              </>
+            )}
+          </button>
+
           <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-200">
             <input
               type="checkbox"
@@ -215,6 +270,7 @@ export const App: React.FC = () => {
           </label>
 
           <button
+            type="button"
             onClick={() => executeBake(input, recipe)}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs shadow-sm shadow-cyan-500/20 transition"
           >
@@ -262,6 +318,6 @@ export const App: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default App;

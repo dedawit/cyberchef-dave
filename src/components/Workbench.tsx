@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import {
   Copy,
   Check,
@@ -38,11 +38,11 @@ function formatHexDump(str: string): string {
   for (let offset = 0; offset < maxBytes; offset += 16) {
     const slice = bytes.subarray(offset, offset + 16);
     const hexPart = Array.from(slice)
-      .map((b) => b.toString(16).padStart(2, '0'))
+      .map((b: number) => b.toString(16).padStart(2, '0'))
       .join(' ')
       .padEnd(47, ' ');
     const asciiPart = Array.from(slice)
-      .map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.'))
+      .map((b: number) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.'))
       .join('');
     lines.push(`${offset.toString(16).padStart(8, '0')}  ${hexPart}  |${asciiPart}|`);
   }
@@ -52,7 +52,7 @@ function formatHexDump(str: string): string {
   return lines.join('\n');
 }
 
-export const Workbench: React.FC<WorkbenchProps> = ({
+export function Workbench({
   input,
   onChangeInput,
   finalOutput,
@@ -61,9 +61,9 @@ export const Workbench: React.FC<WorkbenchProps> = ({
   totalDurationMs,
   isRunning,
   activeError,
-}) => {
+}: WorkbenchProps) {
   const [viewMode, setViewMode] = useState<OutputViewMode>('text');
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const displayedOutput = inspectedStep ? inspectedStep.outputSnapshot : finalOutput;
@@ -96,7 +96,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -148,6 +148,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
               className="hidden"
             />
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
               title="Load file into Input"
@@ -156,6 +157,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
               <span>Open File</span>
             </button>
             <button
+              type="button"
               onClick={() => onChangeInput('')}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
               title="Clear Input"
@@ -195,6 +197,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
           <div className="flex items-center gap-1.5">
             {inspectedStep && (
               <button
+                type="button"
                 onClick={onClearInspectedStep}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition"
               >
@@ -206,6 +209,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
             {/* View Mode Switcher: Text | Hex | Diff */}
             <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 mr-2">
               <button
+                type="button"
                 onClick={() => setViewMode('text')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition ${
                   viewMode === 'text'
@@ -217,6 +221,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
                 <span>Text</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('hex')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition ${
                   viewMode === 'hex'
@@ -228,6 +233,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
                 <span>Hex Dump</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('diff')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition ${
                   viewMode === 'diff'
@@ -241,6 +247,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
             </div>
 
             <button
+              type="button"
               onClick={() => onChangeInput(displayedOutput)}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
               title="Replace Input with current Output"
@@ -250,6 +257,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={handleCopy}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
             >
@@ -267,6 +275,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={handleDownload}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
               title="Download Output as file"
@@ -280,7 +289,9 @@ export const Workbench: React.FC<WorkbenchProps> = ({
         {activeError && (
           <div className="px-4 py-2 bg-rose-950/80 border-b border-rose-500/40 text-xs text-rose-200 flex items-center justify-between">
             <span>
-              <strong>Step #{activeError.stepIndex + 1} ({activeError.operationName}) Error:</strong>{' '}
+              <strong>
+                Step #{activeError.stepIndex + 1} ({activeError.operationName}) Error:
+              </strong>{' '}
               {activeError.message}
             </span>
           </div>
@@ -333,4 +344,4 @@ export const Workbench: React.FC<WorkbenchProps> = ({
       </div>
     </main>
   );
-};
+}

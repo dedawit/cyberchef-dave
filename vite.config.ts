@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { cyberChefNodeApiPlugin } from './server/apiMiddleware';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cyberChefNodeApiPlugin()],
   server: {
     port: 5173,
     proxy: {

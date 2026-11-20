@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Search,
   Star,
@@ -19,14 +19,14 @@ interface SidebarProps {
   onToggleFavorite: (opId: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+export function Sidebar({
   onAddOperation,
   onLoadPreset,
   favorites,
   onToggleFavorite,
-}) => {
-  const [search, setSearch] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+}: SidebarProps) {
+  const [search, setSearch] = useState<string>('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     'Data Encodings': true,
     'Cryptography & Hashes': true,
@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const filteredOperations = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return ALL_OPERATIONS.filter((op) => {
+    return ALL_OPERATIONS.filter((op: OperationDefinition) => {
       if (showFavoritesOnly && !favorites.includes(op.id)) return false;
       if (!q) return true;
       return (
@@ -49,7 +49,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [search, showFavoritesOnly, favorites]);
 
   const toggleCategory = (cat: OperationCategory) => {
-    setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+    setOpenCategories((prev: Record<string, boolean>) => ({
+      ...prev,
+      [cat]: !prev[cat],
+    }));
   };
 
   return (
@@ -61,7 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Operations ({ALL_OPERATIONS.length})
           </span>
           <button
-            onClick={() => setShowFavoritesOnly((v) => !v)}
+            type="button"
+            onClick={() => setShowFavoritesOnly((v: boolean) => !v)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${
               showFavoritesOnly
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
@@ -85,6 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           {search && (
             <button
+              type="button"
               onClick={() => setSearch('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300"
             >
@@ -96,14 +101,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Categorized Operations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {CATEGORIES.map((category) => {
-          const ops = filteredOperations.filter((o) => o.category === category);
+        {CATEGORIES.map((category: OperationCategory) => {
+          const ops = filteredOperations.filter(
+            (o: OperationDefinition) => o.category === category
+          );
           if (ops.length === 0) return null;
           const isOpen = Boolean(search) || openCategories[category];
 
           return (
-            <div key={category} className="rounded-lg border border-slate-800/80 bg-slate-950/40 overflow-hidden">
+            <div
+              key={category}
+              className="rounded-lg border border-slate-800/80 bg-slate-950/40 overflow-hidden"
+            >
               <button
+                type="button"
                 onClick={() => toggleCategory(category)}
                 className="w-full flex items-center justify-between px-3 py-2 text-left bg-slate-900/60 hover:bg-slate-800/70 transition"
               >
@@ -124,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {isOpen && (
                 <div className="divide-y divide-slate-800/50">
-                  {ops.map((op) => {
+                  {ops.map((op: OperationDefinition) => {
                     const isFav = favorites.includes(op.id);
                     return (
                       <div
@@ -195,8 +206,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span>Quick-Start Demo Recipes</span>
         </div>
         <div className="space-y-1.5 max-h-36 overflow-y-auto">
-          {PRESET_RECIPES.map((preset) => (
+          {PRESET_RECIPES.map((preset: PresetRecipe) => (
             <button
+              type="button"
               key={preset.id}
               onClick={() => onLoadPreset(preset)}
               className="w-full text-left px-2.5 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 transition group"
@@ -211,4 +223,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
     </aside>
   );
-};
+}
